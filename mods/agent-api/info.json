@@ -1,0 +1,9 @@
+{
+  "name": "agent-api",
+  "version": "0.1.0",
+  "title": "Agent API",
+  "author": "factorio-jev",
+  "description": "Remote interface for an external agent to observe and control player 1 over RCON, with game-time costs for actions.",
+  "factorio_version": "2.1",
+  "dependencies": ["base"]
+}

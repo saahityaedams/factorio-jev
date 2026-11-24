@@ -12,3 +12,4 @@ logs/
 
 # Local secrets (ANTHROPIC_API_KEY)
 .env
+.run/
