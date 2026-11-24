@@ -9,3 +9,6 @@ wheels/
 # Virtual environments
 .venv
 logs/
+
+# Local secrets (ANTHROPIC_API_KEY)
+.env
