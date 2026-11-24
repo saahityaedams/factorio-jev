@@ -166,7 +166,7 @@ it.
 
 ---
 
-## Results (2026-11-24)
+## Results (2026-11-24/25)
 
 All Claude runs use `claude-opus-5-5` at medium effort. Costs are estimates from token counts.
 Logs are in `logs/` (gitignored).
@@ -183,27 +183,32 @@ several calls per response. It used about twice the game time, though, because i
 furnace once and waited rather than feeding it while mining. This scenario has relaxed rules
 (teleport, instant mining), so it mainly shows that the pipeline works end to end.
 
-### B. Supply challenge: $2 per run
+### B. Supply challenge
 
 | Run | Change | Levels completed | Points | Tool calls | Cost | Ended because |
 |---|---|---|---|---|---|---|
 | 1 | first version | **3** | 3,583 | 142 | $2.02 | cost cap (at the start of level 4) |
 | 2 | trimmed per-call payload | **4** | 4,667 | 226 | $2.00 | cost cap (90 s into level 5) |
+| 3 | same as run 2, **$15 cap** | **8** | 7,985 | 803 | $15.05 | cost cap (mid level 9, 171 s left) |
 
 How long each level took (game seconds used / time limit):
 
-| Level | Run 1 | Run 2 |
-|---|---|---|
-| 1: 15 stone | 79 / 336 s | 110 / 336 s |
-| 2: 30 iron plates | 117 / 420 s | 180 / 420 s |
-| 3: 30 iron + 30 copper | 216 / 420 s | 218 / 420 s |
-| 4: 30 iron + 30 gears | – | 65 / 420 s |
-| 5: 40 iron + 30 gears + 40 cable | – | (stopped by cost cap after 90 s) |
+| Level | Run 1 | Run 2 | Run 3 ($15) |
+|---|---|---|---|
+| 1: 15 stone | 79 / 336 s | 110 / 336 s | 59 / 336 s |
+| 2: 30 iron plates | 117 / 420 s | 180 / 420 s | 200 / 420 s |
+| 3: 30 iron + 30 copper | 216 / 420 s | 218 / 420 s | 184 / 420 s |
+| 4: 30 iron + 30 gears | – | 65 / 420 s | 194 / 420 s |
+| 5: 40 iron + 30 gears + 40 cable | – | (stopped by cost cap after 90 s) | 168 / 420 s |
+| 6: + 30 electronic circuits | – | – | 156 / 420 s |
+| 7: + 10 red science, 50 magazines | – | – | 285 / 420 s |
+| 8: + 20 transport belts | – | – | 184 / 420 s |
+| 9: + 20 inserters (6 items) | – | – | stopped at 249 s: iron 50/50, belts 20/20, inserters 20/20, circuits 15/30, gears 0/30, red science 0/10 |
 
 **What we saw**
 
-- **Claude never failed a level.** Every level it started, it finished with time to spare. Both
-  runs ended on the money cap, not on game over. Over the levels it reached, the binding limit
+- **Claude never failed a level.** Every level it started, it finished with time to spare. All
+  three runs ended on the money cap, not on game over. Over the levels it reached, the binding limit
   was budget, not skill.
 - **It plays sensibly.** It hand-mined stone for level 1, then crafted stone furnaces, built
   burner mining drills that feed furnaces directly, fuelled everything with coal, collected
@@ -222,23 +227,53 @@ How long each level took (game seconds used / time limit):
   it only had to hand-craft 30 gear wheels and deliver them (65 s of 420 s). The infrastructure
   it built early paid off.
 
-| Point in the run | Run 1 cost | Run 2 cost |
-|---|---|---|
-| Level 1 done | $0.08 | $0.07 |
-| Level 2 done | $0.54 | $0.39 |
-| Level 3 done | $1.88 | $1.06 |
-| Level 4 done | – | $1.45 |
+| Point in the run | Run 1 cost | Run 2 cost | Run 3 cost |
+|---|---|---|---|
+| Level 1 done | $0.08 | $0.07 | $0.06 |
+| Level 2 done | $0.54 | $0.39 | $0.24 |
+| Level 3 done | $1.88 | $1.06 | $0.56 |
+| Level 4 done | – | $1.45 | $0.96 |
+| Level 5 done | – | – | $1.56 |
+| Level 6 done | – | – | $2.52 |
+| Level 7 done | – | – | $5.37 |
+| Level 8 done | – | – | $7.66 |
+| Stopped in level 9 | – | – | $15.05 |
+
+#### Run 3 ($15): where it got to and what slowed it down
+
+- **8 of 21 levels, no game over.** It cleared every level it started. Level 7 was the closest
+  call (285 of 420 s used, only 555 points). When the money ran out in level 9 it had 3 of 6
+  items fully delivered and circuits half done, with 171 s left.
+- **It grew a real factory.** It built 19 burner drills (including a coal drill into an iron
+  chest), 16 stone furnaces, and it pre-crafted the next level's items: all 20 inserters were
+  delivered within 10 s of level 9 starting. For level 9 it went for **electric power**: an
+  offshore pump, a boiler, 2 steam engines, poles, 3 assembling machines and 4 labs, and it
+  started researching.
+- **Our API cost it time and money, not its play.** 48 of its 61 failed calls were attempts to
+  place the **offshore pump** (calls 619–685, finally succeeding on try 49). Water is a map
+  *tile*, not an entity, so `find_nearest("water")` returned an error, and the API gives no way
+  to see where the shoreline is. Claude had to guess coordinates. That stretch alone cost about
+  $3 and much of level 9's time. **Fixing this (a tile lookup for water) is the top
+  improvement.**
+- **Cost grows faster than progress.** Every request re-sends the whole conversation (about
+  207K tokens per request on average over the run), so the per-call price rose from under 1¢ to about 4¢. Levels 1–4
+  cost $0.96 in total; level 8 alone cost $2.29. History re-reads were 65% of the $15 (49M
+  cached tokens read, $9.81). Clearing old tool results (context editing) or a running summary
+  would make long runs much cheaper.
 
 ### Caveats
 
-- Two Supply runs is a small sample, and map spawn and resource layouts vary between runs.
+- Three Supply runs is a small sample, and map spawn and resource layouts vary between runs.
   More runs are needed for a reliable number.
+- The API has no view of terrain tiles (water, cliffs), so placing water-based buildings is
+  trial and error. See the offshore-pump note above.
 - Movement is still a short "walk" (teleport with walking-time cost). There's no pathfinding
   around obstacles.
 - The supply harness pauses the game between actions, so this measures planning, not
   real-time play.
 - The later levels (circuits, science packs) need power, research and assemblers. The tools
-  exist (`place`, `set_recipe`, `research`), but no run has reached those levels yet.
+  exist (`place`, `set_recipe`, `research`). Run 3 started on power and research in level 9
+  but ran out of budget there.
 
 ---
 
