@@ -469,7 +469,7 @@ function actions.recipe_info(player, action)
     end
     return out
   end
-  return { ok = true, name = recipe.name, enabled = recipe.enabled, category = recipe.category,
+  return { ok = true, name = recipe.name, enabled = recipe.enabled,
     crafting_seconds = recipe.energy, ingredients = list(recipe.ingredients), products = list(recipe.products) }
 end
 
@@ -486,6 +486,12 @@ function actions.technology_info(player, action)
       if effect.type == "unlock-recipe" then table.insert(unlocks, effect.recipe) end
     end
     for _, ing in pairs(tech.research_unit_ingredients) do table.insert(cost, { name = ing.name, amount = ing.amount }) end
+    local trigger = tech.prototype.research_trigger
+    if trigger then
+      -- Trigger technologies unlock by doing something (craft/mine/build an item), not via labs.
+      return { ok = true, name = tech.name, researched = tech.researched, prerequisites = prereqs,
+        unlocks_recipes = unlocks, unlocked_by_trigger = trigger }
+    end
     return { ok = true, name = tech.name, researched = tech.researched, prerequisites = prereqs, unlocks_recipes = unlocks,
       unit_count = tech.research_unit_count, unit_ingredients = cost, unit_seconds = tech.research_unit_energy / 60 }
   end

@@ -14,12 +14,18 @@ def main() -> None:
     parser.add_argument("--password", default="agent-env-dev-password")
     parser.add_argument("--iterations", type=int, default=400)
     parser.add_argument("--speed", type=float, default=1.0, help="game.speed to set before running")
-    parser.add_argument("--agent", choices=["scripted", "llm"], default="scripted")
+    parser.add_argument("--agent", choices=["scripted", "llm", "supply"], default="scripted")
     parser.add_argument("--max-cost", type=float, default=2.0, help="LLM agent: stop once estimated spend hits this (USD)")
     parser.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"], help="LLM agent effort")
     args = parser.parse_args()
 
     with RCONClient(args.host, args.port, args.password) as rcon:
+        if args.agent == "supply":
+            # Built-in Supply challenge (scripts/launch_supply.sh + graphical client).
+            from factorio_agent.supply import run_supply
+
+            run_supply(rcon, args.iterations, max_cost=args.max_cost, effort=args.effort)
+            return
         client = GameClient(rcon)
         client.set_speed(args.speed)
         try:

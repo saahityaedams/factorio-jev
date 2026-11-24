@@ -1,9 +1,4 @@
-"""LLM-driven agent: Claude plays the agent-env scenario through tool use.
-
-The game's state and actions are exposed as tools. A manual Messages API loop
-(rather than the SDK tool runner) keeps per-turn control: a hard tool-call
-budget, a cost cap, token accounting, and stopping the moment the goal is hit.
-"""
+"""LLM-driven agent: Claude plays the agent-env scenario (50 iron plates) through tool use."""
 
 from __future__ import annotations
 
@@ -12,13 +7,9 @@ import math
 import time
 from typing import Any
 
-import anthropic
-
+from factorio_agent.claude_loop import run_tool_loop
+from factorio_agent.claude_loop import tool as _tool
 from factorio_agent.game_client import GameClient
-
-MODEL = "claude-opus-5-5"
-# $ per million tokens for claude-opus-5-5 (input, output, cache write 5m, cache read).
-PRICE = {"input": 4.00, "output": 20.00, "cache_write": 5.00, "cache_read": 0.20}
 
 SYSTEM_PROMPT = """You are playing Factorio through a tool API. Goal: have at least 50 iron plates \
 in your inventory.
@@ -36,15 +27,6 @@ in bulk) and prefer longer waits over many short ones. Each action result includ
 so you rarely need `get_state`. Stop calling tools once the goal is reached."""
 
 _XY = {"x": {"type": "number"}, "y": {"type": "number"}}
-
-
-def _tool(name: str, description: str, props: dict[str, Any], required: list[str]) -> dict[str, Any]:
-    return {
-        "name": name,
-        "description": description,
-        "strict": True,
-        "input_schema": {"type": "object", "properties": props, "required": required, "additionalProperties": False},
-    }
 
 
 TOOLS = [
@@ -125,25 +107,6 @@ def summarize_state(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-class Budget:
-    def __init__(self, max_cost: float):
-        self.max_cost = max_cost
-        self.tokens = {"input": 0, "output": 0, "cache_write": 0, "cache_read": 0}
-
-    def add(self, usage: Any) -> None:
-        self.tokens["input"] += usage.input_tokens or 0
-        self.tokens["output"] += usage.output_tokens or 0
-        self.tokens["cache_write"] += getattr(usage, "cache_creation_input_tokens", 0) or 0
-        self.tokens["cache_read"] += getattr(usage, "cache_read_input_tokens", 0) or 0
-
-    @property
-    def cost(self) -> float:
-        return sum(self.tokens[k] * PRICE[k] / 1e6 for k in PRICE)
-
-    def exceeded(self) -> bool:
-        return self.cost >= self.max_cost
-
-
 def _execute(client: GameClient, name: str, args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     """Run one tool call. Returns (result payload for the model, raw state after)."""
     if name == "get_state":
@@ -167,96 +130,26 @@ def _execute(client: GameClient, name: str, args: dict[str, Any]) -> tuple[dict[
 
 
 def run_llm(client: GameClient, max_tool_calls: int, max_cost: float = 2.0, effort: str = "medium") -> dict[str, Any]:
-    api = anthropic.Anthropic()
-    budget = Budget(max_cost)
-    start = time.monotonic()
     initial = client.get_state()
-    start_tick = initial["tick"]
+    holder = {"state": initial}
 
-    messages: list[dict[str, Any]] = [{
-        "role": "user",
-        "content": "Here is the starting state. Reach the goal.\n" + json.dumps(summarize_state(initial)),
-    }]
-    tool_calls = failures = api_calls = 0
-    state = initial
-    stop = "max_tool_calls"
+    def execute(name: str, args: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+        payload, holder["state"] = _execute(client, name, args)
+        return payload, bool(payload.get("result", {"ok": True}).get("ok", False))
 
-    while tool_calls < max_tool_calls:
-        if budget.exceeded():
-            stop = "cost_cap"
-            break
-        response = api.beta.messages.create(
-            model=MODEL,
-            max_tokens=16000,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS,
-            messages=messages,
-            cache_control={"type": "ephemeral"},
-            output_config={"effort": effort},
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-        )
-        api_calls += 1
-        budget.add(response.usage)
-        messages.append({"role": "assistant", "content": response.content})
-
-        for block in response.content:
-            if block.type == "text" and block.text.strip():
-                print(f"[claude] {block.text.strip()}", flush=True)
-
-        if response.stop_reason == "refusal":
-            stop = "refusal"
-            break
-        tool_uses = [b for b in response.content if b.type == "tool_use"]
-        if not tool_uses:
-            if state.get("goal_reached"):
-                stop = "goal_reached"
-                break
-            messages.append({"role": "user", "content": "The goal is not reached yet. Keep playing using the tools."})
-            continue
-
-        results = []
-        for tu in tool_uses:
-            tool_calls += 1
-            try:
-                payload, state = _execute(client, tu.name, dict(tu.input))
-                ok = payload.get("result", {"ok": True}).get("ok", False)
-            except Exception as exc:  # report game-side errors back to the model
-                payload, ok = {"error": str(exc)}, False
-            failures += 0 if ok else 1
-            print(
-                f"[call {tool_calls:3d}] {tu.name}({json.dumps(tu.input)}) -> "
-                f"{json.dumps(payload.get('result', payload.get('error', 'state')))} "
-                f"| plates={state.get('iron_plates')} cost=${budget.cost:.3f}",
-                flush=True,
-            )
-            results.append({
-                "type": "tool_result",
-                "tool_use_id": tu.id,
-                "content": json.dumps(payload),
-                **({} if ok else {"is_error": True}),
-            })
-        messages.append({"role": "user", "content": results})
-
-        if state.get("goal_reached"):
-            stop = "goal_reached"
-            break
-
+    tally = run_tool_loop(
+        system=SYSTEM_PROMPT,
+        tools=TOOLS,
+        first_message="Here is the starting state. Reach the goal.\n" + json.dumps(summarize_state(initial)),
+        execute=execute,
+        is_done=lambda: "goal_reached" if holder["state"].get("goal_reached") else None,
+        progress=lambda: f"plates={holder['state'].get('iron_plates')}",
+        max_tool_calls=max_tool_calls,
+        max_cost=max_cost,
+        effort=effort,
+    )
     final = client.get_state()
-    tally = {
-        "agent": "llm",
-        "model": MODEL,
-        "effort": effort,
-        "goal_reached": bool(final.get("goal_reached")),
-        "iron_plates": final.get("iron_plates"),
-        "stop_reason": stop,
-        "tool_calls": tool_calls,
-        "failed_tool_calls": failures,
-        "api_calls": api_calls,
-        "tokens": budget.tokens,
-        "est_cost_usd": round(budget.cost, 3),
-        "game_ticks": final["tick"] - start_tick,
-        "wall_seconds": round(time.monotonic() - start, 1),
-    }
+    tally = {"agent": "llm", "goal_reached": bool(final.get("goal_reached")), "iron_plates": final.get("iron_plates"),
+             "game_ticks": final["tick"] - initial["tick"], **tally}
     print(f"TALLY {tally}", flush=True)
     return tally
