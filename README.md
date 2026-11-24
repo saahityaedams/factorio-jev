@@ -6,55 +6,65 @@ plates**.
 
 ## Pieces
 
-- `~/Library/Application Support/factorio/scenarios/agent-env/control.lua` —
-  the scenario. Spawns the player near a guaranteed iron-ore patch with a
-  burner mining drill, stone furnace, and coal. Exposes a `remote` interface
-  (`get_state`, `execute_action`) that the Python side calls over RCON.
+- `scenario/agent-env/control.lua` — the scenario (source of truth; the
+  launch script copies it into `~/Library/Application Support/factorio/scenarios/agent-env/`).
+  Creates a script-owned character next to a guaranteed iron-ore patch with a
+  burner mining drill, stone furnace, and 20 coal, so it works on a headless
+  server with no players. A graphical client that joins is attached to the same
+  character. Exposes a `remote` interface (`get_state`, `execute_action`).
+- `config/server-settings.json` — disables `auto_pause` so the game ticks with
+  nobody connected.
 - `factorio_agent/rcon_client.py` — minimal Source-RCON protocol client.
 - `factorio_agent/game_client.py` — wraps RCON calls into `get_state()` /
   `execute_action(dict)` / `set_speed(n)`.
-- `factorio_agent/decide.py` — placeholder decision function (walks to and
-  mines the nearest iron ore). Swap this out for real agent logic later.
-- `factorio_agent/loop.py` — the turn loop: get state → decide → act → repeat
-  until the goal is reached or iterations run out.
+- `factorio_agent/decide.py` — deterministic scripted solver (stateless; derives
+  every decision from the current state).
+- `factorio_agent/llm_agent.py` — Claude (`claude-opus-5-5`) playing via tool
+  use: state and actions are tools; tool-call budget and USD cost cap.
+- `factorio_agent/loop.py` — turn loop for the scripted agent; prints a `TALLY`.
+
+## Actions (`execute_action`)
+
+| type | fields | notes |
+|---|---|---|
+| `move` | `x, y` | teleports to the nearest free spot |
+| `mine` | `name, x, y, count` | hand-mines up to 50 units instantly |
+| `place_entity` | `name, x, y, direction?, exact?` | consumes the item; falls back to a nearby free spot unless `exact` |
+| `transfer_to_entity` | `name, x, y, item, count` | only removes what the entity accepted |
+| `collect_from_entity` | `name, x, y` | empties the output inventory |
+| `craft` | `recipe, count` | hand-craft queue |
+| `wait` | — | no-op; real time passes between turns |
 
 ## Running it
 
-RCON only comes alive on Factorio's server component — a plain singleplayer
-"Play → Scenarios" session never starts it. So this runs as a small headless
-server (which loads the scenario and exposes RCON) plus a separate graphical
-client that joins it over localhost multiplayer so you can still watch/play.
-
-1. Start the headless server (runs in the foreground of this terminal):
+1. Start the headless server (foreground; leave it running):
 
    ```
    ./scripts/launch_server.sh
    ```
 
-   (hardcoded dev password `agent-env-dev-password` on RCON port `27015` —
-   see the script if you want to change either.)
+   (dev RCON password `agent-env-dev-password` on port `27015`.)
 
-2. In another terminal, launch the graphical client and connect to it:
+2. Optional: watch with the graphical client: `./scripts/launch_client.sh`.
 
-   ```
-   ./scripts/launch_client.sh
-   ```
-
-   This opens a normal Factorio window already joined to the server's game.
-
-3. In a third terminal, run the driver:
+3. Run an agent:
 
    ```
-   uv run python -m factorio_agent --password agent-env-dev-password --iterations 20
+   # scripted solver (~17 s wall clock at speed 10)
+   uv run python -m factorio_agent --speed 10
+
+   # Claude via tool use (needs ANTHROPIC_API_KEY; e.g. in a gitignored .env)
+   set -a; . ./.env; set +a
+   uv run python -m factorio_agent --agent llm --speed 10 --iterations 60 --max-cost 2
    ```
 
-   Each turn prints the fetched state, the chosen action, and the action's
-   result. The loop stops early if `goal_reached` becomes true (iron-plate
-   count >= 50).
+   Restart the server to get a fresh map before each run.
 
 ## Notes
 
-- No LLM is wired in yet — `decide()` is a fixed rule so the state/action
-  plumbing can be verified independently of any agent logic.
-- The `move` action currently teleports the character rather than simulating
-  walking; fine for exercising the loop, not meant to look like normal play.
+- `game.speed` does scale a dedicated server's tick rate (speed 10 gives about
+  600 ticks/s), so `--speed` makes runs much faster.
+- Mining and movement are instant (teleport + direct `mine_entity`); fine for
+  exercising the loop, not meant to look like normal play.
+- Factorio 2.1: the furnace input inventory is `defines.inventory.crafter_input`
+  (`furnace_source` no longer exists).
