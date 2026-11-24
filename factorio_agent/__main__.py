@@ -11,13 +11,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Drive the agent-env Factorio scenario over RCON.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=27015)
-    parser.add_argument("--password", required=True)
+    parser.add_argument("--password", default="agent-env-dev-password")
     parser.add_argument("--iterations", type=int, default=400)
+    parser.add_argument("--speed", type=float, default=1.0, help="game.speed to set before running")
+    parser.add_argument("--agent", choices=["scripted", "llm"], default="scripted")
     args = parser.parse_args()
 
     with RCONClient(args.host, args.port, args.password) as rcon:
         client = GameClient(rcon)
-        run(client, args.iterations)
+        client.set_speed(args.speed)
+        try:
+            if args.agent == "scripted":
+                from factorio_agent.decide import decide
+
+                run(client, decide, args.iterations)
+            else:
+                from factorio_agent.llm_agent import run_llm
+
+                run_llm(client, args.iterations)
+        finally:
+            client.set_speed(1.0)
 
 
 if __name__ == "__main__":
