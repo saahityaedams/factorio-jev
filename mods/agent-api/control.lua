@@ -78,13 +78,21 @@ local function contents(inventory)
   return out
 end
 
-local INVENTORY_SLOTS = {
-  { "fuel", defines.inventory.fuel },
-  { "input", defines.inventory.crafter_input },
-  { "output", defines.inventory.crafter_output },
-  { "chest", defines.inventory.chest },
-  { "lab_input", defines.inventory.lab_input },
-  { "turret_ammo", defines.inventory.turret_ammo },
+-- Inventory ids overlap numerically (fuel == chest == turret_ammo == 1), so
+-- pick the meaningful inventories per entity type instead of probing them all.
+local INVENTORIES_BY_TYPE = {
+  furnace = { { "fuel", defines.inventory.fuel }, { "input", defines.inventory.crafter_input },
+    { "output", defines.inventory.crafter_output } },
+  ["assembling-machine"] = { { "input", defines.inventory.crafter_input },
+    { "output", defines.inventory.crafter_output } },
+  ["mining-drill"] = { { "fuel", defines.inventory.fuel } },
+  boiler = { { "fuel", defines.inventory.fuel } },
+  container = { { "chest", defines.inventory.chest } },
+  ["logistic-container"] = { { "chest", defines.inventory.chest } },
+  lab = { { "science_packs", defines.inventory.lab_input } },
+  ["ammo-turret"] = { { "ammo", defines.inventory.turret_ammo } },
+  car = { { "fuel", defines.inventory.fuel } },
+  inserter = {},
 }
 
 local function entity_info(entity, origin)
@@ -106,7 +114,7 @@ local function entity_info(entity, origin)
       info.recipe = recipe.name
     end
   end
-  for _, slot in ipairs(INVENTORY_SLOTS) do
+  for _, slot in ipairs(INVENTORIES_BY_TYPE[entity.type] or {}) do
     local ok, inv = pcall(entity.get_inventory, slot[2])
     if ok and inv then
       local c = contents(inv)
@@ -346,24 +354,17 @@ function actions.take(player, action)
     return { ok = false, error = err }
   end
   local taken = {}
-  local slots = { defines.inventory.crafter_output, defines.inventory.chest, defines.inventory.crafter_input,
-    defines.inventory.fuel }
-  if action.item then
-    slots = { defines.inventory.crafter_output, defines.inventory.chest, defines.inventory.crafter_input,
-      defines.inventory.fuel, defines.inventory.lab_input, defines.inventory.turret_ammo }
-  end
   local remaining = action.count or math.huge
-  for _, slot in ipairs(slots) do
-    local ok, inv = pcall(entity.get_inventory, slot)
-    if ok and inv and inv.valid then
+  for _, slot in ipairs(INVENTORIES_BY_TYPE[entity.type] or { { "chest", defines.inventory.chest } }) do
+    local role, id = slot[1], slot[2]
+    -- Without an explicit item, only empty output/chest inventories (never fuel or ingredients).
+    local eligible = action.item ~= nil or role == "output" or role == "chest"
+    local ok, inv = pcall(entity.get_inventory, id)
+    if eligible and ok and inv and inv.valid then
       for _, item in pairs(inv.get_contents()) do
         if remaining <= 0 then break end
-        -- Without an explicit item, only empty output/chest inventories (not fuel/ingredients).
-        local wanted = action.item and item.name == action.item or
-          (not action.item and (slot == defines.inventory.crafter_output or slot == defines.inventory.chest))
-        if wanted then
-          local n = math.min(item.count, remaining)
-          local moved = character.insert{ name = item.name, count = n, quality = item.quality }
+        if action.item == nil or item.name == action.item then
+          local moved = character.insert{ name = item.name, count = math.min(item.count, remaining), quality = item.quality }
           if moved > 0 then
             inv.remove{ name = item.name, count = moved, quality = item.quality }
             taken[item.name] = (taken[item.name] or 0) + moved

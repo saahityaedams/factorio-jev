@@ -79,6 +79,26 @@ def _tidy(value: Any) -> Any:
     return value
 
 
+_INVENTORY_ROLES = ("fuel", "input", "output", "chest", "science_packs", "ammo")
+
+
+def _machine_line(b: dict[str, Any]) -> str:
+    """e.g. 'stone-furnace@82,56 working fuel:coal=2 out:iron-plate=10'."""
+    x, y = b["position"]["x"], b["position"]["y"]
+    parts = [f"{b['name']}@{x:g},{y:g}"]
+    if b.get("direction"):
+        parts.append(b["direction"])
+    if b.get("status"):
+        parts.append(b["status"])
+    if b.get("recipe"):
+        parts.append(f"recipe:{b['recipe']}")
+    for role in _INVENTORY_ROLES:
+        if b.get(role):
+            label = "out" if role == "output" else role
+            parts.append(label + ":" + ",".join(f"{k}={v}" for k, v in b[role].items()))
+    return " ".join(parts)
+
+
 class SupplyGame:
     def __init__(self, rcon: RCONClient):
         self.rcon = rcon
@@ -129,6 +149,31 @@ class SupplyGame:
     def state(self) -> dict[str, Any]:
         return {"scenario": self.scenario(), "character": self.character()}
 
+    def status(self) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Compact per-action status (returned after every timed action), plus the raw scenario block.
+
+        Full detail (nearby resources, delivery chest positions, next level's
+        requirements, drill drop positions) is only in get_state, to keep the
+        conversation, and therefore every later request, small.
+        """
+        sc, ch = self.scenario(), self.character()
+        out: dict[str, Any] = {
+            "level": sc["level"],
+            "time_left_s": sc.get("time_left_seconds"),
+            "need": [f"{r['name']} {r['delivered']}/{r['required']}" for r in sc["requirements"]],
+            "met": sc["requirements_met"],
+            "pos": [ch.get("position", {}).get("x"), ch.get("position", {}).get("y")],
+            "inv": ch.get("inventory", {}),
+        }
+        if ch.get("crafting_queue"):
+            out["crafting"] = [f"{q['recipe']} x{q['count']}" for q in ch["crafting_queue"]]
+        if ch.get("research"):
+            out["research"] = ch["research"]
+        machines = [_machine_line(b) for b in ch.get("buildings", [])]
+        if machines:
+            out["machines"] = machines
+        return out, sc
+
     def act(self, action: dict[str, Any]) -> dict[str, Any]:
         if action["type"] == "complete_level":
             return self.complete_level()
@@ -171,8 +216,10 @@ stone and coal take about 2 game seconds per unit at the start). `wait` lets tim
 build or to use machines/chests. `find_nearest` locates things beyond your view.
 - Read-only tools (get_state, find_nearest, recipe_info, technology_info) cost no game time.
 
-Each timed action returns its result plus a fresh state, so you rarely need `get_state`. Tool calls also \
-cost real money, so plan well and batch work, but the game score is what matters most."""
+Each timed action returns its result plus a compact status: level, time left, delivery progress, your \
+position and inventory, and your nearby machines with their contents. Call `get_state` for full details: \
+nearby resource tiles, delivery chest positions, the next level's requirements and drill drop positions. \
+Tool calls also cost real money, so plan well and batch work, but the game score is what matters most."""
 
 _XY = {"x": {"type": "number"}, "y": {"type": "number"}}
 _ENTITY = {"name": {"type": "string", "description": "entity name, e.g. stone-furnace"}, **_XY}
@@ -229,9 +276,8 @@ def run_supply(rcon: RCONClient, max_tool_calls: int, max_cost: float = 2.0, eff
         ok = bool(result.get("ok"))
         if name in _READ_ONLY:
             return {"result": result}, ok
-        state = game.state()
-        last["scenario"] = state["scenario"]
-        return {"result": result, "state": state}, ok
+        status, last["scenario"] = game.status()
+        return {"result": result, "status": status}, ok
 
     def is_done() -> str | None:
         s = last["scenario"]
