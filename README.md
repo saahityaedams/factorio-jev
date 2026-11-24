@@ -169,7 +169,7 @@ it.
 ## Results (2026-11-24/25)
 
 All Claude runs use `claude-opus-5-5` at medium effort. Costs are estimates from token counts.
-Logs are in `logs/` (gitignored).
+Full logs of every run are in `logs/`.
 
 ### A. agent-env: 50 iron plates
 

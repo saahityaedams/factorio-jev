@@ -1,0 +1,47 @@
+[turn   0 tick     21] plates= 0 ore= 0 coal=20 action={'type': 'place_entity', 'name': 'stone-furnace', 'x': 24.5, 'y': -22.5} -> {'ok': True, 'position': {'x': 25, 'y': -22}}
+[turn   1 tick     30] plates= 0 ore= 0 coal=20 action={'type': 'transfer_to_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22, 'item': 'coal', 'count': 5} -> {'ok': True, 'inserted': 5}
+[turn   2 tick     35] plates= 0 ore= 0 coal=15 action={'type': 'mine', 'name': 'iron-ore', 'x': 22.5, 'y': -22.5, 'count': 10} -> {'ok': True, 'mined': 10, 'inventory_delta': 10}
+[turn   3 tick     41] plates= 0 ore=10 coal=15 action={'type': 'transfer_to_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22, 'item': 'iron-ore', 'count': 10} -> {'ok': True, 'inserted': 10}
+[turn   4 tick     47] plates= 0 ore= 0 coal=15 action={'type': 'mine', 'name': 'iron-ore', 'x': 22.5, 'y': -22.5, 'count': 10} -> {'ok': True, 'mined': 10, 'inventory_delta': 10}
+[turn   5 tick     53] plates= 0 ore=10 coal=15 action={'type': 'transfer_to_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22, 'item': 'iron-ore', 'count': 10} -> {'ok': True, 'inserted': 10}
+[turn   6 tick     59] plates= 0 ore= 0 coal=15 action={'type': 'mine', 'name': 'iron-ore', 'x': 22.5, 'y': -22.5, 'count': 10} -> {'ok': True, 'mined': 10, 'inventory_delta': 10}
+[turn   7 tick     64] plates= 0 ore=10 coal=15 action={'type': 'transfer_to_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22, 'item': 'iron-ore', 'count': 10} -> {'ok': True, 'inserted': 10}
+[turn   8 tick     70] plates= 0 ore= 0 coal=15 action={'type': 'mine', 'name': 'iron-ore', 'x': 22.5, 'y': -22.5, 'count': 10} -> {'ok': True, 'mined': 10, 'inventory_delta': 10}
+[turn   9 tick     76] plates= 0 ore=10 coal=15 action={'type': 'transfer_to_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22, 'item': 'iron-ore', 'count': 10} -> {'ok': True, 'inserted': 10}
+[turn  10 tick     81] plates= 0 ore= 0 coal=15 action={'type': 'mine', 'name': 'iron-ore', 'x': 22.5, 'y': -22.5, 'count': 10} -> {'ok': True, 'mined': 10, 'inventory_delta': 10}
+[turn  11 tick     86] plates= 0 ore=10 coal=15 action={'type': 'transfer_to_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22, 'item': 'iron-ore', 'count': 10} -> {'ok': True, 'inserted': 10}
+[turn  12 tick     91] plates= 0 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  13 tick    699] plates= 0 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  14 tick    704] plates= 3 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  15 tick   1312] plates= 3 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  16 tick   1319] plates= 6 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  17 tick   1929] plates= 6 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  18 tick   1937] plates= 9 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  19 tick   2548] plates= 9 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 4}}
+[turn  20 tick   2556] plates=13 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  21 tick   3165] plates=13 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  22 tick   3172] plates=16 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  23 tick   3782] plates=16 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  24 tick   3788] plates=19 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  25 tick   4397] plates=19 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  26 tick   4404] plates=22 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  27 tick   5014] plates=22 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  28 tick   5022] plates=25 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  29 tick   5631] plates=25 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 4}}
+[turn  30 tick   5639] plates=29 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  31 tick   6249] plates=29 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  32 tick   6257] plates=32 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  33 tick   6865] plates=32 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  34 tick   6872] plates=35 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  35 tick   7482] plates=35 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  36 tick   7489] plates=38 ore= 0 coal=15 action={'type': 'wait'} -> {'ok': True}
+[turn  37 tick   8099] plates=38 ore= 0 coal=15 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  38 tick   8106] plates=41 ore= 0 coal=15 action={'type': 'transfer_to_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22, 'item': 'coal', 'count': 5} -> {'ok': True, 'inserted': 5}
+[turn  39 tick   8113] plates=41 ore= 0 coal=10 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 1}}
+[turn  40 tick   8120] plates=42 ore= 0 coal=10 action={'type': 'wait'} -> {'ok': True}
+[turn  41 tick   8728] plates=42 ore= 0 coal=10 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  42 tick   8735] plates=45 ore= 0 coal=10 action={'type': 'wait'} -> {'ok': True}
+[turn  43 tick   9346] plates=45 ore= 0 coal=10 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 3}}
+[turn  44 tick   9353] plates=48 ore= 0 coal=10 action={'type': 'wait'} -> {'ok': True}
+[turn  45 tick   9962] plates=48 ore= 0 coal=10 action={'type': 'collect_from_entity', 'name': 'stone-furnace', 'x': 25, 'y': -22} -> {'ok': True, 'collected': {'iron-plate': 2}}
+TALLY {'goal_reached': True, 'iron_plates': 50, 'turns': 46, 'failed_actions': 0, 'actions': {'place_entity': 1, 'transfer_to_entity': 7, 'mine': 5, 'wait': 16, 'collect_from_entity': 17}, 'game_ticks': 9947, 'wall_seconds': 16.7}
