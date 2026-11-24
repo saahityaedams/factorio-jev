@@ -15,6 +15,8 @@ def main() -> None:
     parser.add_argument("--iterations", type=int, default=400)
     parser.add_argument("--speed", type=float, default=1.0, help="game.speed to set before running")
     parser.add_argument("--agent", choices=["scripted", "llm"], default="scripted")
+    parser.add_argument("--max-cost", type=float, default=2.0, help="LLM agent: stop once estimated spend hits this (USD)")
+    parser.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"], help="LLM agent effort")
     args = parser.parse_args()
 
     with RCONClient(args.host, args.port, args.password) as rcon:
@@ -28,7 +30,7 @@ def main() -> None:
             else:
                 from factorio_agent.llm_agent import run_llm
 
-                run_llm(client, args.iterations)
+                run_llm(client, args.iterations, max_cost=args.max_cost, effort=args.effort)
         finally:
             client.set_speed(1.0)
 
